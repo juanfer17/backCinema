@@ -1,0 +1,53 @@
+package com.cinema.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.cinema.DTO.RequestAuthDTO;
+import com.cinema.DTO.ResponseAuthDTO;
+import com.cinema.service.UserService;
+import com.cinema.service.impl.UserDetailsServiceImpl;
+import com.cinema.utilies.JWTUtilies;
+
+@RestController
+@RequestMapping("/security")
+public class LoginController {
+	
+	@Autowired
+	private UserService userService;
+	
+	@Autowired
+	private UserDetailsServiceImpl userDetailsServiceImpl;
+	
+	@Autowired
+	private JWTUtilies jwtUtilies;
+	
+	@Autowired
+	private AuthenticationManager authenticationManager;
+	
+	@PostMapping("/authentication")
+	public ResponseEntity<ResponseAuthDTO> login(@RequestBody RequestAuthDTO requestAuthDTO) {
+		
+		try {
+			if(userService.validaterCredentials(requestAuthDTO)) {
+				authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(requestAuthDTO.getEmail(), requestAuthDTO.getPassword()));
+				UserDetails userDetails = userDetailsServiceImpl.loadUserByUsername(requestAuthDTO.getEmail());
+				String token = jwtUtilies.generateToken(userDetails);
+				return new ResponseEntity<>(new ResponseAuthDTO("00","Login exitoso",token),HttpStatus.OK);
+			}else {
+				return new ResponseEntity<>(new ResponseAuthDTO("01","Login fallido",null),HttpStatus.FORBIDDEN);
+			}
+			
+		}catch(Exception e) {
+			return new ResponseEntity<>(new ResponseAuthDTO("02","Login fallido", null),HttpStatus.UNAUTHORIZED);
+		}
+	}
+}
